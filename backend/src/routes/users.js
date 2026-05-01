@@ -6,11 +6,11 @@ const User = require('../models/User');
 // Get user profile
 router.get('/profile', auth, async (req, res) => {
   try {
-    // User is already attached to req by auth middleware
     res.json({
       id: req.user._id,
       name: req.user.name,
       username: req.user.username,
+      email: req.user.email,
       aadhaar: req.user.aadhaar,
       points: req.user.points,
       bottlePoints: req.user.bottlePoints,
@@ -36,7 +36,7 @@ router.patch('/profile', auth, async (req, res) => {
   try {
     updates.forEach(update => req.user[update] = req.body[update]);
     await req.user.save();
-    
+
     res.json({
       id: req.user._id,
       name: req.user.name,
@@ -52,11 +52,15 @@ router.patch('/profile', auth, async (req, res) => {
 // Get user recycling history
 router.get('/history', auth, async (req, res) => {
   try {
-    // This is a placeholder implementation
-    // In a real app, you would fetch the user's recycling history from the database
+    const user = await User.findById(req.user._id).populate({
+      path: 'recycledItems',
+      select: 'itemId type points usedAt',
+      options: { sort: { usedAt: -1 } }
+    });
+
     res.json({
-      totalItems: req.user.recycledItems.length,
-      history: [] // Placeholder for actual history data
+      totalItems: user.recycledItems.length,
+      history: user.recycledItems
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching history', error: error.message });
@@ -66,11 +70,12 @@ router.get('/history', auth, async (req, res) => {
 // Get user coupons
 router.get('/coupons', auth, async (req, res) => {
   try {
-    // This is a placeholder implementation
-    // In a real app, you would fetch the user's coupons from the database
-    res.json({
-      coupons: [] // Placeholder for actual coupons data
+    const user = await User.findById(req.user._id).populate({
+      path: 'coupons',
+      select: 'code type value description isActive expiryDate createdAt'
     });
+
+    res.json({ coupons: user.coupons });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching coupons', error: error.message });
   }
@@ -80,12 +85,11 @@ router.get('/coupons', auth, async (req, res) => {
 router.post('/update-bottle', auth, async (req, res) => {
   try {
     const { bottlePoints } = req.body;
-    
+
     if (typeof bottlePoints !== 'number') {
       return res.status(400).json({ message: 'Invalid bottle points value' });
     }
 
-    // Update user's bottle points
     req.user.bottlePoints = bottlePoints;
     await req.user.save();
 
@@ -97,9 +101,8 @@ router.post('/update-bottle', auth, async (req, res) => {
       bottlePoints: req.user.bottlePoints
     });
   } catch (error) {
-    console.error('Error updating bottle points:', error);
     res.status(500).json({ message: 'Error updating bottle points', error: error.message });
   }
 });
 
-module.exports = router; 
+module.exports = router;

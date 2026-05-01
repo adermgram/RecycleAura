@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: ''
+  },
   aadhaar: {
     type: String,
     required: true,

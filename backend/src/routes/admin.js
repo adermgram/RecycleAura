@@ -8,12 +8,12 @@ const QRCode = require('qrcode');
 
 // Points configuration for different item types
 const ITEM_POINTS = {
-  plastic: 2,
-  tin: 3,
-  paper: 1,
-  glass: 4,
-  electronics: 5,
-  other: 1
+  plastic: 5,
+  tin: 6,
+  paper: 3,
+  glass: 8,
+  electronics: 15,
+  other: 4
 };
 
 /**

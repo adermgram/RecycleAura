@@ -1,46 +1,59 @@
-import React, { useState } from 'react';
-import { QrReader } from 'react-qr-reader';
+import React, { useState, useEffect, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { API_BASE_URL, getAuthHeader } from '../config/api';
 
 const QRScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const scannerRef = useRef(null);
+  const containerId = 'qr-scanner-fallback';
 
-  const handleScan = async (data) => {
-    if (data) {
-      try {
-        // Parse the QR code data
-        const [itemId, type, points] = data.split('|');
-        
-        // Send the scanned data to the backend
-        const response = await axios.post(
-          `${API_BASE_URL}/api/items/validate-qr`,
-          { qrData: data },
-          { headers: getAuthHeader() }
-        );
+  useEffect(() => {
+    if (isScanning) {
+      const scanner = new Html5Qrcode(containerId);
+      scannerRef.current = scanner;
 
-        if (response.data.valid) {
-          setScanResult({
-            itemType: type,
-            points: parseInt(points),
-            totalPoints: response.data.totalPoints
-          });
-          toast.success(`Successfully recycled ${type}! You earned ${points} points.`);
-        }
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Error processing QR code');
-      }
-      setIsScanning(false);
+      scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 250 },
+        async (decodedText) => {
+          await scanner.stop();
+          setIsScanning(false);
+
+          try {
+            const [itemId, type, points] = decodedText.split('|');
+            const response = await axios.post(
+              `${API_BASE_URL}/api/items/validate-qr`,
+              { itemId, type, points: parseInt(points) },
+              { headers: getAuthHeader() }
+            );
+            if (response.data.valid) {
+              setScanResult({
+                itemType: type,
+                points: parseInt(points),
+                totalPoints: response.data.totalPoints
+              });
+              toast.success(`Recycled ${type}! +${points} points`);
+            }
+          } catch (error) {
+            toast.error(error.response?.data?.message || 'Error processing QR code');
+          }
+        },
+        () => {}
+      ).catch(() => {
+        toast.error('Error accessing camera');
+        setIsScanning(false);
+      });
     }
-  };
 
-  const handleError = (error) => {
-    console.error(error);
-    toast.error('Error accessing camera');
-    setIsScanning(false);
-  };
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, [isScanning]);
 
   return (
     <div className="qr-scanner-container">
@@ -53,17 +66,7 @@ const QRScanner = () => {
         </button>
       ) : (
         <div className="scanner-wrapper">
-          <QrReader
-            constraints={{ facingMode: 'user' }}
-            onResult={(result, error) => {
-              if (result) {
-                handleScan(result?.text);
-              }
-              if (error) {
-                handleError(error);
-              }
-            }}
-          />
+          <div id={containerId} style={{ width: '100%' }} />
           <button
             onClick={() => setIsScanning(false)}
             className="btn btn-secondary mt-3"
@@ -85,4 +88,4 @@ const QRScanner = () => {
   );
 };
 
-export default QRScanner; 
+export default QRScanner;

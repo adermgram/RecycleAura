@@ -1,41 +1,41 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
+const { sendWelcomeEmail } = require('../services/notificationService');
 const router = express.Router();
 
-// Register route
-router.post('/register', async (req, res) => {
-  try {
-    const { name, username, aadhaar, password, address } = req.body;
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts, please try again after 15 minutes' }
+});
 
-    // Check if user already exists by username or Aadhaar
-    const existingUser = await User.findOne({ 
-      $or: [
-        { username },
-        { aadhaar }
-      ]
+// Register route
+router.post('/register', authLimiter, async (req, res) => {
+  try {
+    const { name, username, email, aadhaar, password, address } = req.body;
+
+    const existingUser = await User.findOne({
+      $or: [{ username }, { aadhaar }]
     });
-    
+
     if (existingUser) {
-      return res.status(400).json({ 
-        message: existingUser.username === username 
-          ? 'Username already taken' 
-          : 'Aadhaar number already registered' 
+      return res.status(400).json({
+        message: existingUser.username === username
+          ? 'Username already taken'
+          : 'Ghana card number already registered'
       });
     }
 
-    // Create new user
-    const user = new User({
-      name,
-      username,
-      aadhaar,
-      password,
-      address
-    });
-
+    const user = new User({ name, username, email, aadhaar, password, address });
     await user.save();
 
-    // Generate JWT token
+    // Non-blocking welcome email
+    sendWelcomeEmail(user).catch(() => {});
+
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
@@ -48,6 +48,7 @@ router.post('/register', async (req, res) => {
         id: user._id,
         name: user.name,
         username: user.username,
+        email: user.email,
         aadhaar: user.aadhaar,
         address: user.address,
         points: user.points,
@@ -60,23 +61,20 @@ router.post('/register', async (req, res) => {
 });
 
 // Login route
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Find user by username
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
@@ -89,6 +87,7 @@ router.post('/login', async (req, res) => {
         id: user._id,
         name: user.name,
         username: user.username,
+        email: user.email,
         aadhaar: user.aadhaar,
         points: user.points,
         isAdmin: user.isAdmin
@@ -99,4 +98,4 @@ router.post('/login', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

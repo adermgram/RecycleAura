@@ -40,6 +40,7 @@ const Auth = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
+    email: '',
     aadhaarNumber: '',
     address: '',
     password: '',
@@ -79,6 +80,12 @@ const Auth = ({ onLoginSuccess }) => {
     if (!isLogin) {
       if (!formData.fullName.trim()) {
         newErrors.fullName = 'Full name is required';
+      }
+
+      if (!formData.email.trim()) {
+        newErrors.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'Enter a valid email address';
       }
 
       if (!formData.aadhaarNumber.trim()) {
@@ -131,6 +138,7 @@ const Auth = ({ onLoginSuccess }) => {
         : {
             name: formData.fullName,
             username: formData.username,
+            email: formData.email,
             aadhaar: formData.aadhaarNumber,
             address: formData.address,
             password: formData.password,
@@ -271,6 +279,19 @@ const Auth = ({ onLoginSuccess }) => {
                     )}
 
                     <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full px-5 py-3 rounded-lg bg-gray-100 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Email Address"
+                    />
+                    {shouldShowError('email') && (
+                      <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                    )}
+
+                    <input
                       id="aadhaarNumber"
                       name="aadhaarNumber"
                       type="text"
@@ -401,6 +422,7 @@ const Auth = ({ onLoginSuccess }) => {
                       setFormData({
                         fullName: '',
                         username: '',
+                        email: '',
                         aadhaarNumber: '',
                         address: '',
                         password: '',
