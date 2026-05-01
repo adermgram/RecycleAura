@@ -12,6 +12,8 @@ const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // CORS — allow localhost in dev and the deployed frontend URL in production
 const allowedOrigins = [
   'http://localhost:5173',
