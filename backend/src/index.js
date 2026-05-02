@@ -10,6 +10,11 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 
+
+//this forced the dns to use ipv 4. i should change this later on when i use resend or other service other than render
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
+
 const app = express();
 
 app.set('trust proxy', 1);
