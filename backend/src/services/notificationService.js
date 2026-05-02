@@ -4,16 +4,12 @@ const Coupon = require('../models/Coupon');
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: 587,
-  secure: false,
-  family: 4,
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: process.env.EMAIL_PORT === '465',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 20000,
+  }
 });
 
 const sendEmail = async (to, subject, html) => {
